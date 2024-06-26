@@ -1,0 +1,61 @@
+volumes:
+  mysql-data:
+  esi-leap-data:
+
+services:
+  database:
+    image: docker.io/mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: esi-leap-root
+      MYSQL_DATABASE: esi_leap
+      MYSQL_USER: esi_leap
+      MYSQL_PASSWORD: esi-leap-user
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping"]
+      interval: 10s
+    volumes:
+    - mysql-data:/var/lib/mysql
+
+  dbsync:
+    build:
+      context: .
+      dockerfile: Containerfile
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+    - ./tests/esi-leap.conf:/etc/esi-leap/esi-leap.conf
+    - esi-leap-data:/data
+    command:
+    - esi-leap-dbsync
+    - create_schema
+
+  api:
+    build:
+      context: .
+      dockerfile: Containerfile
+    volumes:
+    - ./tests/esi-leap.conf:/etc/esi-leap/esi-leap.conf
+    - ./tests/nodes:/tmp/nodes
+    - esi-leap-data:/data
+    depends_on:
+      dbsync:
+        condition: service_completed_successfully
+    ports:
+    - 127.0.0.1:7777:7777
+    command:
+    - esi-leap-api
+
+  manager:
+    build:
+      context: .
+      dockerfile: Containerfile
+    volumes:
+    - ./tests/esi-leap.conf:/etc/esi-leap/esi-leap.conf
+    - ./tests/nodes:/tmp/nodes
+    - esi-leap-data:/data
+    depends_on:
+      dbsync:
+        condition: service_completed_successfully
+    command:
+    - esi-leap-manager

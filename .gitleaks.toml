@@ -1,0 +1,6 @@
+[allowlist]
+  description = "Global Allowlist"
+
+  paths = [
+    '''\/tests\/esi-leap.conf''',
+  ]
